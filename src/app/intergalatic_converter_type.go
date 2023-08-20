@@ -6,11 +6,7 @@ type IntergalacticConverter struct {
 }
 
 type IIntergalacticConverter interface {
-	ProcessInput(input string) string
-	intergalacticToRoman(intergalactic string) (string, error)
-	romanToArabic(roman string) (int, error)
-	processMetalValue(definition string) error
-	processQuery(query string) (string, error)
+	ProcessInput(input string) error
 }
 
 func NewIntergalacticConverter() *IntergalacticConverter {

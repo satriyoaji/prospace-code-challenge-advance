@@ -26,7 +26,7 @@ func main() {
 
 	for _, line := range inputLines {
 		response := converter.ProcessInput(line)
-		if response != "" {
+		if response != nil {
 			fmt.Println(response)
 		}
 	}
