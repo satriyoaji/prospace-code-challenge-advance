@@ -6,25 +6,56 @@ import (
 	"strings"
 )
 
-func (c *IntergalacticConverter) ProcessInput(input string) string {
-	if strings.HasSuffix(input, "Credits") {
-		if err := c.processMetalValue(input); err != nil {
-			return "Error: " + err.Error()
+func (c *IntergalacticConverter) ProcessInput(input string) error {
+	lines := strings.Split(input, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
 		}
-		return ""
-	} else if strings.HasPrefix(input, "how much") || strings.HasPrefix(input, "how many") || strings.HasPrefix(input, "Does") || strings.HasPrefix(input, "Is") {
-		response, err := c.processQuery(input)
-		if err != nil {
-			return "Error: " + err.Error()
+
+		// Handling intergalactic to Roman numeral mapping
+		if strings.Count(line, " ") == 2 && strings.Contains(line, " is ") && !strings.Contains(line, " Credits") {
+			if err := c.processIntergalacticMapping(line); err != nil {
+				return err
+			}
+			continue
 		}
-		return response
-	} else {
-		parts := strings.Split(input, " is ")
-		if len(parts) == 2 {
-			c.NumeralMappings[parts[0]] = parts[1]
+
+		// Handling metal value definitions
+		if strings.Contains(line, " Credits") && !strings.HasPrefix(line, "how many") {
+			if err := c.processMetalValue(line); err != nil {
+				return err
+			}
+			continue
 		}
-		return ""
+
+		// Handling queries
+		if strings.HasPrefix(line, "how much is") || strings.HasPrefix(line, "how many Credits is") {
+			result, err := c.processQuery(line)
+			if err != nil {
+				return err
+			}
+			fmt.Println(result)
+			continue
+		}
+
+		// Todo: if any Handling other types of lines or returning an error
 	}
+	return nil
+}
+
+func (c *IntergalacticConverter) processIntergalacticMapping(line string) error {
+	parts := strings.Split(line, " is ")
+	intergalactic := parts[0]
+	roman := parts[1]
+
+	if len(roman) != 1 || !strings.Contains("IVXLCDM", roman) {
+		return fmt.Errorf("invalid Roman numeral: %s", roman)
+	}
+
+	c.NumeralMappings[intergalactic] = roman
+	return nil
 }
 
 func (c *IntergalacticConverter) intergalacticToRoman(intergalactic string) (string, error) {
@@ -71,32 +102,33 @@ func (c *IntergalacticConverter) romanToArabic(roman string) (int, error) {
 	return total, nil
 }
 
-func (c *IntergalacticConverter) processMetalValue(definition string) error {
-	parts := strings.Split(definition, " is ")
+func (c *IntergalacticConverter) processMetalValue(statement string) error {
+	parts := strings.Split(statement, " is ")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid metal value definition")
 	}
+	intergalacticAndMetal := strings.Fields(parts[0])
 
-	words := strings.Fields(parts[0])
-	metal := words[len(words)-1]
-	intergalactic := strings.Join(words[:len(words)-2], " ")
+	metal := intergalacticAndMetal[len(intergalacticAndMetal)-1]
+	intergalactic := strings.Join(intergalacticAndMetal[:len(intergalacticAndMetal)-1], " ")
 
 	roman, err := c.intergalacticToRoman(intergalactic)
 	if err != nil {
 		return err
 	}
-
 	arabic, err := c.romanToArabic(roman)
 	if err != nil {
 		return err
 	}
 
-	credits, err := strconv.ParseFloat(parts[1][:len(parts[1])-8], 64)
+	// Extracting the numeric part of the string (without " Credits")
+	creditsPart := strings.Split(parts[1], " ")
+	creditsValue, err := strconv.ParseFloat(creditsPart[0], 64) // Parsing only the numeric part
 	if err != nil {
 		return err
 	}
 
-	c.MetalValues[metal] = credits / float64(arabic)
+	c.MetalValues[metal] = creditsValue / float64(arabic)
 	return nil
 }
 
@@ -134,7 +166,7 @@ func (c *IntergalacticConverter) processQuery(query string) (string, error) {
 
 		metalValue, found := c.MetalValues[metal]
 		if !found {
-			return "", fmt.Errorf("Unknown metal: %s", metal)
+			return "", fmt.Errorf("unknown metal: %s", metal)
 		}
 
 		credits := float64(arabic) * metalValue
