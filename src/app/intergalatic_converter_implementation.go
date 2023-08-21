@@ -23,7 +23,7 @@ func (c *IntergalacticConverter) ProcessInput(input string) error {
 		}
 
 		// Handling metal value definitions
-		if strings.Contains(line, " Credits") {
+		if strings.Contains(line, " Credits") && !strings.HasPrefix(line, "how many") {
 			if err := c.processMetalValue(line); err != nil {
 				return err
 			}
@@ -104,15 +104,18 @@ func (c *IntergalacticConverter) romanToArabic(roman string) (int, error) {
 
 func (c *IntergalacticConverter) processMetalValue(statement string) error {
 	parts := strings.Split(statement, " is ")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid metal value definition")
+	}
 	intergalacticAndMetal := strings.Fields(parts[0])
-	metal := intergalacticAndMetal[len(intergalacticAndMetal)-2]
-	intergalactic := strings.Join(intergalacticAndMetal[:len(intergalacticAndMetal)-2], " ")
+
+	metal := intergalacticAndMetal[len(intergalacticAndMetal)-1]
+	intergalactic := strings.Join(intergalacticAndMetal[:len(intergalacticAndMetal)-1], " ")
 
 	roman, err := c.intergalacticToRoman(intergalactic)
 	if err != nil {
 		return err
 	}
-
 	arabic, err := c.romanToArabic(roman)
 	if err != nil {
 		return err
@@ -163,7 +166,7 @@ func (c *IntergalacticConverter) processQuery(query string) (string, error) {
 
 		metalValue, found := c.MetalValues[metal]
 		if !found {
-			return "", fmt.Errorf("Unknown metal: %s", metal)
+			return "", fmt.Errorf("unknown metal: %s", metal)
 		}
 
 		credits := float64(arabic) * metalValue
